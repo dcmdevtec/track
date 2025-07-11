@@ -1,0 +1,48 @@
+// File: /app/api/shipsgo/bl-tracking/route.ts
+import { shipsGoAPI } from "@/lib/services/shipsgo-api"
+import { NextRequest, NextResponse } from "next/server"
+
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+  const blContainersRef = searchParams.get("blContainersRef")
+  const shippingLine = searchParams.get("shippingLine")
+  const emailAddress = searchParams.get("email") || undefined
+
+  if (!blContainersRef || !shippingLine) {
+    return NextResponse.json(
+      { success: false, message: "Faltan parámetros requeridos (blContainersRef, shippingLine)" },
+      { status: 400 },
+    )
+  }
+
+  try {
+    // Paso 1: Crear el tracking con el BL/booking
+    const creation = await shipsGoAPI.createTrackingWithBL({
+      blContainersRef,
+      shippingLine,
+      emailAddress,
+    })
+
+    if (!creation?.requestId) {
+      return NextResponse.json(
+        { success: false, message: "Error creando el tracking." },
+        { status: 500 },
+      )
+    }
+
+    // Paso 2: Consultar el estado del seguimiento
+    const trackingData = await shipsGoAPI.getTrackingStatusByRequestId(creation.requestId)
+
+    return NextResponse.json({
+      success: true,
+      requestId: creation.requestId,
+      data: trackingData,
+    })
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error.message || "Error inesperado" },
+      { status: 500 },
+    )
+  }
+}
