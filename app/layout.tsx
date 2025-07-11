@@ -12,9 +12,14 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "Sistema de Control Marítimo - Industrias Cannon",
   description: "Dashboard ejecutivo para control y seguimiento de embarques marítimos",
-  viewport: "width=device-width, initial-scale=1",
-    generator: 'v0.dev'
+  generator: "v0.dev"
 }
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+}
+
 
 export default function RootLayout({
   children,

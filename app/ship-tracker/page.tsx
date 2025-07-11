@@ -1,9 +1,12 @@
-// app/ship-tracker/page.tsx
-import ShipList from "@/components/shipList";
-import ShipMap from "@/components/shipMap";
-import { SidebarTrigger } from "@/components/ui/sidebar";
-import dynamic from "next/dynamic";
 
+"use client"
+
+import dynamic from "next/dynamic";
+import ShipList from "@/components/shipList";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+
+
+const ShipMap = dynamic(() => import("@/components/shipMap"), { ssr: false });
 
 
 export default function ShipTrackerPage() {
