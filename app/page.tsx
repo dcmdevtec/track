@@ -12,6 +12,7 @@ import { UpcomingArrivals } from "@/components/upcoming-arrivals"
 import { ShipmentService, AlertService } from "@/lib/services/database"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ThemeToggle } from "@/components/theme-toggle"
+import ShipMap from "@/components/shipMap"
 
 // Componente de loading para el dashboard
 function DashboardSkeleton() {
@@ -142,7 +143,7 @@ async function DashboardContent() {
               </CardHeader>
               <CardContent>
                 <Suspense fallback={<Skeleton className="w-full h-[300px] lg:h-[400px]" />}>
-                  <WorldMap />
+                  <ShipMap />
                 </Suspense>
               </CardContent>
             </Card>
