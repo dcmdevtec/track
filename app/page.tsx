@@ -12,7 +12,9 @@ import { UpcomingArrivals } from "@/components/upcoming-arrivals"
 import { ShipmentService, AlertService } from "@/lib/services/database"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ThemeToggle } from "@/components/theme-toggle"
-import ShipMap from "@/components/shipMap"
+
+
+const ShipMap = dynamic(() => import("@/components/shipMap"), { ssr: false });
 
 // Componente de loading para el dashboard
 function DashboardSkeleton() {
