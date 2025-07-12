@@ -6,15 +6,13 @@ import { Button } from "@/components/ui/button"
 import { Container, Ship, AlertTriangle, Clock, TrendingUp, Globe, MapPin, Calendar, RefreshCw } from "lucide-react"
 import { KPICard } from "@/components/kpi-card"
 import { ShipmentStatusChart } from "@/components/shipment-status-chart"
-import { WorldMap } from "@/components/world-map"
+
 import { RecentAlerts } from "@/components/recent-alerts"
 import { UpcomingArrivals } from "@/components/upcoming-arrivals"
 import { ShipmentService, AlertService } from "@/lib/services/database"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ThemeToggle } from "@/components/theme-toggle"
-
-
-const ShipMap = dynamic(() => import("@/components/shipMap"), { ssr: false });
+import WorldMap from "@/components/world-map"
 
 // Componente de loading para el dashboard
 function DashboardSkeleton() {
@@ -145,7 +143,7 @@ async function DashboardContent() {
               </CardHeader>
               <CardContent>
                 <Suspense fallback={<Skeleton className="w-full h-[300px] lg:h-[400px]" />}>
-                  <ShipMap />
+                  <WorldMap />
                 </Suspense>
               </CardContent>
             </Card>
