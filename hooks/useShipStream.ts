@@ -1,112 +1,63 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useEffect } from "react"
 
-type ShipData = {
+interface Ship {
   MMSI: number
   LAT: number
   LON: number
-  SOG: number // speed over ground
-  COG: number // course over ground
+  SOG: number
+  COG: number
   ShipName: string
-  ShipType?: string
-  Destination?: string
-  ETA?: string
+  ShipType: string
+  Destination: string
 }
 
-export function useShipStream() {
-  const [ships, setShips] = useState<ShipData[]>([])
+const useShipStream = () => {
+  const [ships, setShips] = useState<Ship[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout
+  const fetchShipData = async () => {
+    try {
+      setError(null)
+      const res = await fetch("/api/ais/positions?limit=150")
+      if (!res.ok) throw new Error(`API ${res.status}`)
+      const { data } = await res.json()
 
-    const fetchShipData = async () => {
-      try {
-        setError(null)
+      const processed = (Array.isArray(data) ? data : [])
+        .map((s: any) => ({
+          MMSI: Number(s.Mmsi ?? s.mmsi ?? 0),
+          LAT: Number(s.Latitude ?? s.lat ?? s.Lat ?? 0),
+          LON: Number(s.Longitude ?? s.lon ?? s.Lon ?? 0),
+          SOG: Number(s.Sog ?? s.sog ?? 0),
+          COG: Number(s.Cog ?? s.cog ?? 0),
+          ShipName: String(s.ShipName ?? s.shipName ?? `Ship ${s.Mmsi}`),
+          ShipType: s.ShipType ?? "",
+          Destination: s.Destination ?? "",
+        }))
+        .filter((d) => d.LAT && d.LON)
 
-        // Usar la API REST de AISStream para obtener datos de barcos
-        const response = await fetch("https://api.aisstream.io/v0/last_known_positions", {
-          method: "GET",
-          headers: {
-            "X-API-Key": "c6c4f1897fe584d2ae5556af3c1365ec1d66d3f2",
-            "Content-Type": "application/json",
-          },
-        })
-
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.status}`)
-        }
-
-        const data = await response.json()
-        console.log("AISStream data received:", data)
-
-        // Procesar los datos según la estructura de respuesta de AISStream
-        if (data && Array.isArray(data)) {
-          const processedShips: ShipData[] = data
-            .slice(0, 100)
-            .map((ship: any) => ({
-              MMSI: ship.Mmsi || ship.mmsi || 0,
-              LAT: ship.Latitude || ship.lat || ship.Lat || 0,
-              LON: ship.Longitude || ship.lon || ship.Lon || 0,
-              SOG: ship.Sog || ship.sog || ship.SOG || 0,
-              COG: ship.Cog || ship.cog || ship.COG || 0,
-              ShipName: ship.ShipName || ship.shipName || ship.VesselName || `Ship ${ship.Mmsi || ship.mmsi}`,
-              ShipType: ship.ShipType || ship.shipType || "Unknown",
-              Destination: ship.Destination || ship.destination || "",
-              ETA: ship.ETA || ship.eta || "",
-            }))
-            .filter((ship) => ship.LAT !== 0 && ship.LON !== 0) // Filtrar coordenadas válidas
-
-          setShips(processedShips)
-          console.log(`Processed ${processedShips.length} ships`)
-        }
-
-        setLoading(false)
-      } catch (error) {
-        console.error("Error fetching ship data:", error)
-        setError(error instanceof Error ? error.message : "Unknown error")
-        setLoading(false)
-
-        // Datos de prueba si falla la API
-        setShips([
-          {
-            MMSI: 123456789,
-            LAT: 10.4806,
-            LON: -75.5133,
-            SOG: 12.5,
-            COG: 180,
-            ShipName: "Test Ship 1",
-            ShipType: "Cargo",
-            Destination: "CARTAGENA",
-          },
-          {
-            MMSI: 987654321,
-            LAT: 11.0041,
-            LON: -74.807,
-            SOG: 8.3,
-            COG: 90,
-            ShipName: "Test Ship 2",
-            ShipType: "Container",
-            Destination: "BARRANQUILLA",
-          },
-        ])
-      }
+      setShips(processed)
+      setLoading(false)
+    } catch (e) {
+      console.error("useShipStream:", e)
+      setError("No se pudieron obtener los datos de AISStream")
+      setLoading(false)
     }
+  }
 
-    // Fetch inicial
+  useEffect(() => {
     fetchShipData()
 
-    // Actualizar cada 30 segundos
-    intervalId = setInterval(fetchShipData, 30000)
+    const intervalId = setInterval(() => {
+      fetchShipData()
+    }, 15000)
 
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId)
-      }
-    }
+    return () => clearInterval(intervalId)
   }, [])
 
   return { ships, loading, error }
 }
+
+export default useShipStream
