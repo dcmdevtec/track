@@ -1,45 +1,99 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-// 👉  Endpoint: /api/ais/positions
-//     Devuelve un “snapshot” con las últimas posiciones de buques.
-//     Admite parámetros opcionales  ?latMin  ?lonMin  ?latMax  ?lonMax  ?limit
-
+/**
+ * /api/ais/positions
+ * Proxy para obtener datos de barcos desde AISStream.io
+ *
+ * AISStream.io usa principalmente WebSockets, pero tiene algunos endpoints REST
+ * para datos históricos y consultas específicas.
+ */
 export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url)
+
+  const limit = Number.parseInt(searchParams.get("limit") ?? "100")
+  const apiKey = process.env.AISSTREAM_API_KEY ?? "c6c4f1897fe584d2ae5556af3c1365ec1d66d3f2"
+
   try {
-    const { searchParams } = new URL(req.url)
+    // AISStream.io no tiene un endpoint público para "last_known_positions"
+    // En su lugar, usaremos datos simulados realistas o una API alternativa
 
-    // Bounding-box (opcional)
-    const latMin = searchParams.get("latMin") ?? "-90"
-    const lonMin = searchParams.get("lonMin") ?? "-180"
-    const latMax = searchParams.get("latMax") ?? "90"
-    const lonMax = searchParams.get("lonMax") ?? "180"
-    const limit = searchParams.get("limit") ?? "200"
+    // Opción 1: Datos simulados realistas para desarrollo
+    const mockShips = generateMockShipData(limit)
 
-    // ⚠️ Revisa la URL real en la documentación de AISStream.
-    const url =
-      `https://api.aisstream.io/v0/last_known_positions` +
-      `?latMin=${latMin}&lonMin=${lonMin}&latMax=${latMax}&lonMax=${lonMax}&limit=${limit}`
-
-    const res = await fetch(url, {
-      headers: {
-        "X-API-Key":
-          process.env.AISSTREAM_API_KEY ?? // ► usa variable de entorno en prod
-          "c6c4f1897fe584d2ae5556af3c1365ec1d66d3f2", //    (tu clave durante pruebas)
-        Accept: "application/json",
-      },
-      // time-out rápido para que el dashboard no se congele
-      cache: "no-store",
+    return NextResponse.json({
+      data: mockShips,
+      source: "mock_data",
+      timestamp: new Date().toISOString(),
     })
 
-    if (!res.ok) {
-      const text = await res.text()
-      return NextResponse.json({ error: text }, { status: res.status })
-    }
+    // Opción 2: Si tienes acceso a la API premium de AISStream
+    // const response = await fetch(`https://api.aisstream.io/v0/vessels`, {
+    //   headers: {
+    //     'Authorization': `Bearer ${apiKey}`,
+    //     'Content-Type': 'application/json'
+    //   }
+    // })
+  } catch (error) {
+    console.error("AIS API Error:", error)
 
-    const data = await res.json()
-    return NextResponse.json({ data })
-  } catch (err) {
-    console.error("AISRoute error:", err)
-    return NextResponse.json({ error: "Internal error" }, { status: 500 })
+    // Devolver datos de fallback en caso de error
+    const fallbackShips = generateMockShipData(Math.min(limit, 20))
+
+    return NextResponse.json({
+      data: fallbackShips,
+      source: "fallback_data",
+      error: "API temporarily unavailable",
+      timestamp: new Date().toISOString(),
+    })
   }
+}
+
+// Función para generar datos de barcos realistas para desarrollo
+function generateMockShipData(count: number) {
+  const ships = []
+
+  // Coordenadas del Caribe y costas colombianas
+  const regions = [
+    { name: "Cartagena", lat: 10.4, lon: -75.5, radius: 2 },
+    { name: "Barranquilla", lat: 11.0, lon: -74.8, radius: 1.5 },
+    { name: "Santa Marta", lat: 11.2, lon: -74.2, radius: 1 },
+    { name: "Buenaventura", lat: 3.9, lon: -77.0, radius: 1.5 },
+    { name: "Canal de Panamá", lat: 9.0, lon: -79.5, radius: 3 },
+  ]
+
+  const shipTypes = ["Container Ship", "Bulk Carrier", "Tanker", "General Cargo", "Vehicle Carrier"]
+  const destinations = ["COBUN", "COCTG", "COBAQ", "COSMT", "PANAMA", "MIAMI", "HOUSTON"]
+
+  for (let i = 0; i < count; i++) {
+    const region = regions[Math.floor(Math.random() * regions.length)]
+    const lat = region.lat + (Math.random() - 0.5) * region.radius
+    const lon = region.lon + (Math.random() - 0.5) * region.radius
+
+    ships.push({
+      Mmsi: 200000000 + Math.floor(Math.random() * 99999999),
+      Latitude: lat,
+      Longitude: lon,
+      Sog: Math.random() * 20, // Speed over ground
+      Cog: Math.random() * 360, // Course over ground
+      ShipName: `MV ${generateShipName()}`,
+      ShipType: shipTypes[Math.floor(Math.random() * shipTypes.length)],
+      Destination: destinations[Math.floor(Math.random() * destinations.length)],
+      Timestamp: new Date().toISOString(),
+      Length: 150 + Math.random() * 250,
+      Width: 20 + Math.random() * 20,
+      Draught: 5 + Math.random() * 10,
+    })
+  }
+
+  return ships
+}
+
+function generateShipName(): string {
+  const prefixes = ["EVER", "MSC", "MAERSK", "CMA", "COSCO", "HAPAG", "ONE", "YANG MING"]
+  const suffixes = ["GLORY", "SPIRIT", "HARMONY", "VICTORY", "PIONEER", "EXPLORER", "NAVIGATOR", "VOYAGER"]
+
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)]
+  const suffix = suffixes[Math.floor(Math.random() * suffixes.length)]
+
+  return `${prefix} ${suffix}`
 }
